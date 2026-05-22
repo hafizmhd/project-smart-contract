@@ -7,7 +7,7 @@ enum priority {
     HIGH
 }
 
-struct Todo {
+struct Task {
     uint256 id;
     string description;
     bool isCompleted;
@@ -16,9 +16,20 @@ struct Todo {
 }
 
 contract ToDoList {
-    mapping(address => Todo[]) private listTodo;
+    mapping(address => Task[]) private listTodo;
     mapping(uint256 => address[]) private sharedList;
     mapping(address => uint256) private taskCounter;
+
+    // Event
+    event TaskAdded(address indexed user, uint256 taskId);
+    event TaskCompleted(address indexed user, uint256 taskId);
+    event TaskDeleted(address indexed user, uint256 taskId);
+
+    // Modifiers
+    modifier validTaskIndex(uint256 _index) {
+        require(_index < listTodo[msg.sender].length, "Task does not exists");
+        _;
+    }
 
     constructor() {}
 }
