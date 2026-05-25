@@ -56,4 +56,16 @@ contract ToDoList {
 
         emit TaskCompleted(msg.sender, listTodo[msg.sender][_index].id);
     }
+
+    function deleteTask(uint256 _index) external validTaskIndex(_index) {
+        uint256 taskId = listTodo[msg.sender][_index].id;
+
+        uint256 lastIndex = listTodo[msg.sender].length - 1;
+        if (_index != lastIndex) {
+            listTodo[msg.sender][_index] = listTodo[msg.sender][lastIndex];
+        }
+        listTodo[msg.sender].pop();
+
+        emit TaskDeleted(msg.sender, taskId);
+    }
 }
