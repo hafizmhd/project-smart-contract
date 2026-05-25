@@ -68,4 +68,8 @@ contract ToDoList {
 
         emit TaskDeleted(msg.sender, taskId);
     }
+
+    function getTasks() external view returns (Task[] memory) {
+        return listTodo[msg.sender];
+    }
 }
