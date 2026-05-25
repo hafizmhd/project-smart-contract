@@ -50,4 +50,10 @@ contract ToDoList {
 
         emit TaskAdded(msg.sender, newTask.id);
     }
+
+    function markCompleted(uint256 _index) external validTaskIndex(_index) {
+        listTodo[msg.sender][_index].isCompleted = true;
+
+        emit TaskCompleted(msg.sender, listTodo[msg.sender][_index].id);
+    }
 }
