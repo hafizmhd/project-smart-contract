@@ -9,7 +9,7 @@ enum priority {
 
 struct Task {
     uint256 id;
-    string description;
+    string title;
     bool isCompleted;
     uint256 deadline;
     priority priority;
@@ -18,7 +18,7 @@ struct Task {
 contract ToDoList {
     mapping(address => Task[]) private listTodo;
     mapping(uint256 => address[]) private sharedList;
-    mapping(address => uint256) private taskCounter;
+    uint256 private globalTaskCounter;
 
     // Event
     event TaskAdded(address indexed user, uint256 taskId);
@@ -32,4 +32,22 @@ contract ToDoList {
     }
 
     constructor() {}
+
+    function addTask(
+        string calldata _title,
+        uint256 _deadline,
+        priority _priority
+    ) external {
+        Task memory newTask;
+        newTask.id = globalTaskCounter;
+        newTask.title = _title;
+        newTask.deadline = _deadline;
+        newTask.priority = _priority;
+        newTask.isCompleted = false;
+
+        listTodo[msg.sender].push(newTask);
+        globalTaskCounter++;
+
+        emit TaskAdded(msg.sender, newTask.id);
+    }
 }
