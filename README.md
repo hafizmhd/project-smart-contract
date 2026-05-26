@@ -47,3 +47,8 @@ npx hardhat run scripts/deploy.ts
 ## Contract Address
     0x5FbDB2315678afecb367f032d93F642f64180aa3
 
+## Screenshot
+
+<img width="800" height="128" alt="image" src="https://github.com/user-attachments/assets/e53d7589-3167-441f-adf2-1a0fc35e3524" />
+<img width="830" height="299" alt="image" src="https://github.com/user-attachments/assets/84dd17e4-e135-477f-8755-feb5ac7339b0" />
+
