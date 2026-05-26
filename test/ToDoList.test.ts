@@ -336,4 +336,90 @@ describe("ToDoList", () => {
       expect(user2Tasks[0].id).to.equal(1); // globally unique, not 0
     });
   });
+
+  // =============================================
+  // PRIORITY FEATURES
+  // =============================================
+
+  describe("updatePriority - Positive", () => {
+    it("should update task priority", async () => {
+      await toDoList.connect(user1).addTask("Task", futureDeadline(), Priority.LOW);
+      await toDoList.connect(user1).updatePriority(0, Priority.HIGH);
+
+      const tasks = await toDoList.connect(user1).getTasks();
+      expect(tasks[0].priority).to.equal(Priority.HIGH);
+    });
+
+    it("should only update the specified task's priority", async () => {
+      await toDoList.connect(user1).addTask("Task 1", futureDeadline(), Priority.LOW);
+      await toDoList.connect(user1).addTask("Task 2", futureDeadline(), Priority.MEDIUM);
+      await toDoList.connect(user1).updatePriority(0, Priority.HIGH);
+
+      const tasks = await toDoList.connect(user1).getTasks();
+      expect(tasks[0].priority).to.equal(Priority.HIGH);
+      expect(tasks[1].priority).to.equal(Priority.MEDIUM); // unchanged
+    });
+  });
+
+  describe("updatePriority - Negative", () => {
+    it("should revert when index is invalid", async () => {
+      await expect(toDoList.connect(user1).updatePriority(0, Priority.HIGH))
+        .to.be.revertedWith("Task does not exists");
+    });
+
+    it("should revert when index is out of bounds", async () => {
+      await toDoList.connect(user1).addTask("Only task", futureDeadline(), Priority.LOW);
+
+      await expect(toDoList.connect(user1).updatePriority(5, Priority.HIGH))
+        .to.be.revertedWith("Task does not exists");
+    });
+  });
+
+  describe("getTasksByPriority", () => {
+    it("should return only tasks with the specified priority", async () => {
+      await toDoList.connect(user1).addTask("Low 1", futureDeadline(), Priority.LOW);
+      await toDoList.connect(user1).addTask("High 1", futureDeadline(), Priority.HIGH);
+      await toDoList.connect(user1).addTask("Low 2", futureDeadline(), Priority.LOW);
+      await toDoList.connect(user1).addTask("Medium 1", futureDeadline(), Priority.MEDIUM);
+
+      const lowTasks = await toDoList.connect(user1).getTasksByPriority(Priority.LOW);
+      expect(lowTasks.length).to.equal(2);
+      expect(lowTasks[0].title).to.equal("Low 1");
+      expect(lowTasks[1].title).to.equal("Low 2");
+    });
+
+    it("should return empty array when no tasks match the priority", async () => {
+      await toDoList.connect(user1).addTask("Low task", futureDeadline(), Priority.LOW);
+      await toDoList.connect(user1).addTask("Medium task", futureDeadline(), Priority.MEDIUM);
+
+      const highTasks = await toDoList.connect(user1).getTasksByPriority(Priority.HIGH);
+      expect(highTasks.length).to.equal(0);
+    });
+
+    it("should return all tasks when all share the same priority", async () => {
+      await toDoList.connect(user1).addTask("Task 1", futureDeadline(), Priority.MEDIUM);
+      await toDoList.connect(user1).addTask("Task 2", futureDeadline(), Priority.MEDIUM);
+      await toDoList.connect(user1).addTask("Task 3", futureDeadline(), Priority.MEDIUM);
+
+      const mediumTasks = await toDoList.connect(user1).getTasksByPriority(Priority.MEDIUM);
+      expect(mediumTasks.length).to.equal(3);
+    });
+
+    it("should return empty array when user has no tasks", async () => {
+      const tasks = await toDoList.connect(user1).getTasksByPriority(Priority.LOW);
+      expect(tasks.length).to.equal(0);
+    });
+
+    it("should reflect priority changes after updatePriority", async () => {
+      await toDoList.connect(user1).addTask("Task", futureDeadline(), Priority.LOW);
+      await toDoList.connect(user1).updatePriority(0, Priority.HIGH);
+
+      const lowTasks = await toDoList.connect(user1).getTasksByPriority(Priority.LOW);
+      const highTasks = await toDoList.connect(user1).getTasksByPriority(Priority.HIGH);
+
+      expect(lowTasks.length).to.equal(0);
+      expect(highTasks.length).to.equal(1);
+      expect(highTasks[0].title).to.equal("Task");
+    });
+  });
 });

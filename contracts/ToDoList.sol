@@ -38,7 +38,10 @@ contract ToDoList {
         uint256 _deadline,
         priority _priority
     ) external {
-        require(_deadline == 0 || _deadline > block.timestamp, "Deadline must be in the future");
+        require(
+            _deadline == 0 || _deadline > block.timestamp,
+            "Deadline must be in the future"
+        );
 
         Task memory newTask;
         newTask.id = globalTaskCounter;
@@ -71,6 +74,15 @@ contract ToDoList {
         emit TaskDeleted(msg.sender, taskId);
     }
 
+    function updatePriority(
+        uint256 _index,
+        priority newPriority
+    ) external validTaskIndex(_index) {
+        listTodo[msg.sender][_index].priority = newPriority;
+    }
+
+    // Views
+
     function getTasks() external view returns (Task[] memory) {
         return listTodo[msg.sender];
     }
@@ -81,7 +93,11 @@ contract ToDoList {
 
         // First pass: count overdue tasks
         for (uint256 i = 0; i < allTasks.length; i++) {
-            if (!allTasks[i].isCompleted && allTasks[i].deadline != 0 && allTasks[i].deadline < block.timestamp) {
+            if (
+                !allTasks[i].isCompleted &&
+                allTasks[i].deadline != 0 &&
+                allTasks[i].deadline < block.timestamp
+            ) {
                 count++;
             }
         }
@@ -90,12 +106,40 @@ contract ToDoList {
         Task[] memory overdueTasks = new Task[](count);
         uint256 index = 0;
         for (uint256 i = 0; i < allTasks.length; i++) {
-            if (!allTasks[i].isCompleted && allTasks[i].deadline != 0 && allTasks[i].deadline < block.timestamp) {
+            if (
+                !allTasks[i].isCompleted &&
+                allTasks[i].deadline != 0 &&
+                allTasks[i].deadline < block.timestamp
+            ) {
                 overdueTasks[index] = allTasks[i];
                 index++;
             }
         }
 
         return overdueTasks;
+    }
+
+    function getTasksByPriority(
+        priority _priority
+    ) external view returns (Task[] memory) {
+        Task[] memory allTasks = listTodo[msg.sender];
+        uint256 count = 0;
+
+        for (uint256 i = 0; i < allTasks.length; i++) {
+            if (allTasks[i].priority == _priority) {
+                count++;
+            }
+        }
+
+        Task[] memory filteredTasks = new Task[](count);
+        uint256 index = 0;
+        for (uint256 i = 0; i < allTasks.length; i++) {
+            if (allTasks[i].priority == _priority) {
+                filteredTasks[index] = allTasks[i];
+                index++;
+            }
+        }
+
+        return filteredTasks;
     }
 }
