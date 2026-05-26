@@ -38,6 +38,8 @@ contract ToDoList {
         uint256 _deadline,
         priority _priority
     ) external {
+        require(_deadline == 0 || _deadline > block.timestamp, "Deadline must be in the future");
+
         Task memory newTask;
         newTask.id = globalTaskCounter;
         newTask.title = _title;
@@ -71,5 +73,29 @@ contract ToDoList {
 
     function getTasks() external view returns (Task[] memory) {
         return listTodo[msg.sender];
+    }
+
+    function getOverdueTasks() external view returns (Task[] memory) {
+        Task[] memory allTasks = listTodo[msg.sender];
+        uint256 count = 0;
+
+        // First pass: count overdue tasks
+        for (uint256 i = 0; i < allTasks.length; i++) {
+            if (!allTasks[i].isCompleted && allTasks[i].deadline != 0 && allTasks[i].deadline < block.timestamp) {
+                count++;
+            }
+        }
+
+        // Second pass: populate result array
+        Task[] memory overdueTasks = new Task[](count);
+        uint256 index = 0;
+        for (uint256 i = 0; i < allTasks.length; i++) {
+            if (!allTasks[i].isCompleted && allTasks[i].deadline != 0 && allTasks[i].deadline < block.timestamp) {
+                overdueTasks[index] = allTasks[i];
+                index++;
+            }
+        }
+
+        return overdueTasks;
     }
 }

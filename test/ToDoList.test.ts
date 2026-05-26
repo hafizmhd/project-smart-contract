@@ -1,4 +1,4 @@
-import { network } from "hardhat";
+import { network, tasks } from "hardhat";
 import { expect } from "chai";
 import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/types";
 import { ToDoList } from "../types/ethers-contracts/ToDoList.js";
@@ -82,6 +82,23 @@ describe("ToDoList", () => {
       expect(tasks[0].title).to.equal("Task A");
       expect(tasks[1].title).to.equal("Task B");
     });
+
+    it("should allow adding a task with deadline = 0", async () => {
+      await toDoList.connect(user1).addTask("Only Task", 0, Priority.LOW);
+
+      const tasks = await toDoList.connect(user1).getTasks();
+      expect(tasks.length).to.equal(1);
+      expect(tasks[0].deadline).to.equal(0);
+    });
+
+    it("should allow adding a task with a future deadline", async () => {
+      const deadline = futureDeadline();
+      await toDoList.connect(user1).addTask("Only Task", deadline, Priority.LOW);
+
+      const tasks = await toDoList.connect(user1).getTasks();
+      expect(tasks.length).to.equal(1);
+      expect(tasks[0].deadline).to.equal(deadline);
+    });
   });
 
   describe("markCompleted - Positive", () => {
@@ -164,9 +181,89 @@ describe("ToDoList", () => {
     });
   });
 
+  describe("getOverdueTasks", () => {
+    it("should return empty array when no tasks exist", async () => {
+      const tasks = await toDoList.connect(user1).getOverdueTasks();
+
+      expect(tasks.length).to.equal(0);
+    });
+
+    it("should return empty array when no tasks are overdue", async () => {
+      await toDoList.connect(user1).addTask("Only Task", futureDeadline(), Priority.LOW);
+
+      const tasks = await toDoList.connect(user1).getOverdueTasks();
+      expect(tasks.length).to.equal(0);
+    });
+
+    it("should return overdue tasks correctly", async () => {
+      const block = await ethers.provider.getBlock("latest");
+      const shortDeadline = block!.timestamp + 10;
+      await toDoList.connect(user1).addTask("Overdue Task", shortDeadline, Priority.LOW);
+
+      // Fast-forward 20 seconds past the 10-second deadline
+      await ethers.provider.send("evm_increaseTime", [20]);
+      await ethers.provider.send("evm_mine", []);
+
+      const overdueTasks = await toDoList.connect(user1).getOverdueTasks();
+      expect(overdueTasks.length).to.equal(1);
+      expect(overdueTasks[0].title).to.equal("Overdue Task");
+    });
+
+    it("should NOT return completed tasks even if overdue", async () => {
+      const block = await ethers.provider.getBlock("latest");
+      const shortDeadline = block!.timestamp + 10;
+      await toDoList.connect(user1).addTask("Completed Overdue", shortDeadline, Priority.MEDIUM);
+
+      await toDoList.connect(user1).markCompleted(0);
+
+      await ethers.provider.send("evm_increaseTime", [20]);
+      await ethers.provider.send("evm_mine", []);
+
+      const overdueTasks = await toDoList.connect(user1).getOverdueTasks();
+      expect(overdueTasks.length).to.equal(0);
+    });
+
+    it("should NOT return tasks with deadline = 0 (no deadline)", async () => {
+      await toDoList.connect(user1).addTask("No Deadline Task", 0, Priority.HIGH);
+
+      await ethers.provider.send("evm_increaseTime", [20]);
+      await ethers.provider.send("evm_mine", []);
+
+      const overdueTasks = await toDoList.connect(user1).getOverdueTasks();
+      expect(overdueTasks.length).to.equal(0);
+    });
+
+    it("should return only overdue tasks from a mixed list", async () => {
+      const block = await ethers.provider.getBlock("latest");
+      const shortDeadline = block!.timestamp + 10;
+      const farDeadline = block!.timestamp + 86400;
+
+      await toDoList.connect(user1).addTask("Overdue 1", shortDeadline, Priority.LOW);
+      await toDoList.connect(user1).addTask("Overdue 2", shortDeadline, Priority.MEDIUM);
+      await toDoList.connect(user1).addTask("Still Valid", farDeadline, Priority.HIGH);
+      await toDoList.connect(user1).addTask("No Deadline", 0, Priority.LOW);
+
+      await ethers.provider.send("evm_increaseTime", [20]);
+      await ethers.provider.send("evm_mine", []);
+
+      const overdueTasks = await toDoList.connect(user1).getOverdueTasks();
+      expect(overdueTasks.length).to.equal(2);
+      expect(overdueTasks[0].title).to.equal("Overdue 1");
+      expect(overdueTasks[1].title).to.equal("Overdue 2");
+    });
+  });
+
   // =============================================
   // NEGATIVE SCENARIOS
   // =============================================
+
+  describe("addTask - Negative", () => {
+    it("should revert when adding a task with a past deadline", async () => {
+      const pastDeadline = Math.floor(Date.now() / 1000) - 86400;
+
+      await expect(toDoList.connect(user1).addTask("Reverted Task", pastDeadline, Priority.LOW)).to.be.revertedWith("Deadline must be in the future");
+    });
+  });
 
   describe("markCompleted - Negative", () => {
     it("should revert when marking a task with invalid index", async () => {
